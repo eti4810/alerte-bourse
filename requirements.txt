@@ -2,3 +2,4 @@ yfinance
 smtplib
 MIMEText
 MIMEMultipart
+os
