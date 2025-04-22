@@ -15,7 +15,7 @@ alertes = {
     "DSY.PA": 32.0,
     "GTT.PA": 120.0,
     "SAN.PA": 85.0,
-    "SAP.DE": 210,0    
+    "SAP.DE": 210.0    
 }
 
 email_from = os.environ.get('EMAIL_FROM')
