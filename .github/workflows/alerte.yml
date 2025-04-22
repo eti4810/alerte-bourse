@@ -1,0 +1,25 @@
+name: Alerte Bourse
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # Toutes les 10 minutes
+  workflow_dispatch:
+
+jobs:
+  check_stock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cloner le dépôt
+        uses: actions/checkout@v3
+
+      - name: Configurer Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Installer les dépendances
+        run: |
+          pip install -r requirements.txt
+
+      - name: Exécuter le script
+        run: python alerte_bourse.py
