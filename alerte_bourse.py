@@ -8,13 +8,13 @@ from email.mime.multipart import MIMEMultipart
 alertes = {
     "ASML.AS": 530.0,
     "MC.PA": 450.0,
-    "PUB.PA": 170.0,
+    "PUB.PA": 70.0,
     "AIR.PA": 120.0,
     "CAP.PA": 110.0,
     "LR.PA": 80.0,
     "DSY.PA": 32.0,
     "GTT.PA": 120.0,
-    "SAN.PA": 185.0
+    "SAN.PA": 85.0
 }
 
 email_from = os.environ.get('EMAIL_FROM')
