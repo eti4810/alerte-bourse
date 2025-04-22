@@ -16,14 +16,18 @@ alertes = {
     "GTT.PA": 120.0,
     "SAN.PA": 185.0
 }
+
 email_from = os.environ.get('EMAIL_FROM')
 email_to = os.environ.get('EMAIL_TO')
 email_password = os.environ.get('EMAIL_PASSWORD')
 
-# === FONCTION POUR ENVOYER LE MAIL ===
-def envoyer_mail(symbole, prix_actuel, prix_seuil):
-    sujet = f"🔔 Alerte Bourse : {symbole} est à {prix_actuel:.2f} $"
-    message = f"L'action {symbole} est passée sous le seuil de {prix_seuil:.2f} $.\nPrix actuel : {prix_actuel:.2f} $"
+# === Fonction pour envoyer un e-mail groupé ===
+def envoyer_mail_alerte(liste_alertes):
+    sujet = f"🔔 Alerte Bourse - {len(liste_alertes)} action(s) sous seuil"
+    message = "Voici les alertes détectées aujourd'hui :\n\n"
+
+    for symbole, prix_actuel, seuil in liste_alertes:
+        message += f"- {symbole} est à {prix_actuel:.2f} € < seuil {seuil:.2f} €\n"
 
     msg = MIMEMultipart()
     msg['From'] = email_from
@@ -37,6 +41,8 @@ def envoyer_mail(symbole, prix_actuel, prix_seuil):
     server.quit()
 
 # === CHECK DES PRIX ===
+liste_alertes = []
+
 for symbole, seuil in alertes.items():
     action = yf.Ticker(symbole)
 
@@ -44,10 +50,17 @@ for symbole, seuil in alertes.items():
         prix_actuel = action.history(period='1d')['Close'].iloc[-1]
     except Exception as e:
         print(f"⚠️ Erreur pour {symbole} : {e}")
-        continue  # Passe au prochain symbole
+        continue
 
     if prix_actuel < seuil:
-        envoyer_mail(symbole, prix_actuel, seuil)
-        print(f"✅ Alerte envoyée pour {symbole} : {prix_actuel:.2f} $ < {seuil:.2f} $")
+        liste_alertes.append((symbole, prix_actuel, seuil))
+        print(f"🔔 {symbole} est à {prix_actuel:.2f} € < {seuil:.2f} € ✅")
     else:
-        print(f"{symbole} est à {prix_actuel:.2f} $ > {seuil:.2f} $")
+        print(f"{symbole} est à {prix_actuel:.2f} € > {seuil:.2f} €")
+
+# Envoi unique si au moins une alerte
+if liste_alertes:
+    envoyer_mail_alerte(liste_alertes)
+    print(f"✅ Email envoyé avec {len(liste_alertes)} alerte(s)")
+else:
+    print("📭 Aucune alerte aujourd'hui")
