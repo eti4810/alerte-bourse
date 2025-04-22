@@ -2,7 +2,7 @@ name: Alerte Bourse
 
 on:
   schedule:
-    - cron: '*/10 * * * *'  # Toutes les 10 minutes
+    - cron: '0 * * * *'  #'*/10 * * * *' Toutes les 10 minutes
   workflow_dispatch:
 
 jobs:
