@@ -9,9 +9,9 @@ alertes = {
     "AAPL": 250.0,
     "MSFT": 280.0
 }
-email_from = "alerteprix.etilacal@gmail.com"
-email_to = "alerteprix.etilacal@gmail.com"
-email_password = os.environ.get('EMAIL_PASSWORD')  # Utilise un mot de passe d'application sécurisé
+email_from = os.environ.get('EMAIL_FROM')
+email_to = os.environ.get('EMAIL_TO')
+email_password = os.environ.get('EMAIL_PASSWORD')
 
 # === FONCTION POUR ENVOYER LE MAIL ===
 def envoyer_mail(symbole, prix_actuel, prix_seuil):
