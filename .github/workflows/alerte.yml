@@ -22,4 +22,6 @@ jobs:
           pip install -r requirements.txt
 
       - name: Exécuter le script
-        run: python alerte_bourse.py
+        run: |
+          export EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}
+          python alerte_bourse.py
