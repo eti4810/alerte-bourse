@@ -10,7 +10,7 @@ alertes = {
     "MC.PA": 450.0,
     "PUB.PA": 70.0,
     "AIR.PA": 120.0,
-    "CAP.PA": 110.0,
+    "CAP.PA": 310.0,
     "LR.PA": 80.0,
     "DSY.PA": 32.0,
     "GTT.PA": 120.0,
