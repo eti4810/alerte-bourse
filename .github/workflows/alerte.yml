@@ -23,5 +23,5 @@ jobs:
 
       - name: Exécuter le script
         run: |
-          export EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}
-          python alerte_bourse.py
+          EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }} python alerte_bourse.py
+          
