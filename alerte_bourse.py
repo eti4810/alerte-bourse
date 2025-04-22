@@ -1,5 +1,6 @@
 import yfinance as yf
 import smtplib
+import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -10,7 +11,7 @@ alertes = {
 }
 email_from = "alerteprix.etilacal@gmail.com"
 email_to = "alerteprix.etilacal@gmail.com"
-email_password = "cxbx yxcw xuxk axvw"  # Utilise un mot de passe d'application sécurisé
+email_password = os.environ["EMAIL_PASSWORD"]  # Utilise un mot de passe d'application sécurisé
 
 # === FONCTION POUR ENVOYER LE MAIL ===
 def envoyer_mail(symbole, prix_actuel, prix_seuil):
