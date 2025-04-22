@@ -9,7 +9,7 @@ alertes = {
     "ASML.AS": 530.0,
     "MC.PA": 450.0,
     "PUB.PA": 170.0,
-    "AIR.PAS": 120.0,
+    "AIR.PA": 120.0,
     "CAP.PA": 110.0,
     "LR.PA": 80.0,
     "DSY.PA": 32.0,
@@ -39,10 +39,15 @@ def envoyer_mail(symbole, prix_actuel, prix_seuil):
 # === CHECK DES PRIX ===
 for symbole, seuil in alertes.items():
     action = yf.Ticker(symbole)
-    prix_actuel = action.history(period='1d')['Close'].iloc[-1]
+
+    try:
+        prix_actuel = action.history(period='1d')['Close'].iloc[-1]
+    except Exception as e:
+        print(f"⚠️ Erreur pour {symbole} : {e}")
+        continue  # Passe au prochain symbole
 
     if prix_actuel < seuil:
         envoyer_mail(symbole, prix_actuel, seuil)
-        print(f"Alerte envoyée pour {symbole}")
+        print(f"✅ Alerte envoyée pour {symbole} : {prix_actuel:.2f} $ < {seuil:.2f} $")
     else:
         print(f"{symbole} est à {prix_actuel:.2f} $ > {seuil:.2f} $")
