@@ -117,4 +117,4 @@ def main():
         print("📭 Aucune offre trouvée (ou page chargée en JS / structure HTML différente)")
 
 if __name__ == "__main__":
-    main(
+    main()
