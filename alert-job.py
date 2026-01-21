@@ -8,11 +8,10 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # === CONFIGURATION ===
-URL = "https://jobs.servier.com/search/?createNewAlert=false&q=&locationsearch=suresnes&optionsFacetsDD_country=&optionsFacetsDD_lang=&optionsFacetsDD_customfield1=&optionsFacetsDD_customfield3=&optionsFacetsDD_customfield4="
+URL = "https://jobs.servier.com/search/?locationsearch=suresnes"
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; ServierScraper/1.0)",
-    "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+    "User-Agent": "Mozilla/5.0 (compatible; ServierScraper/1.0)"
 }
 
 email_from = os.environ.get("EMAIL_FROM")
@@ -27,69 +26,19 @@ MONTHS_FR = {
 
 # === UTILITAIRES ===
 def parse_french_date(date_str: str) -> datetime:
-    # Ex: "21 janv. 2026"
     day, month_str, year = date_str.split()
     return datetime(int(year), MONTHS_FR[month_str], int(day))
 
 
-def looks_like_login_page(html: str, final_url: str) -> bool:
-    """
-    Détection robuste : uniquement des indices forts (pas de simple mot-clé "connexion").
-    """
-    u = (final_url or "").lower()
-    if any(x in u for x in ["login", "sso", "signin", "auth"]):
-        return True
-
-    soup = BeautifulSoup(html, "html.parser")
-
-    # Indice très fort : champ mot de passe
-    if soup.select_one('input[type="password"]'):
-        return True
-
-    # Indice fort : formulaire mentionnant mot de passe
-    for f in soup.select("form"):
-        txt = f.get_text(" ", strip=True).lower()
-        if "mot de passe" in txt or "password" in txt:
-            return True
-
-    return False
-
-
-def save_debug_html(html: str, filename: str = "debug_servier.html"):
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(html)
-
-
 # === SCRAPING ===
 def fetch_jobs() -> List[Dict[str, str]]:
-    session = requests.Session()
+    response = requests.get(URL, headers=HEADERS, timeout=20)
+    response.raise_for_status()
 
-    # On bloque les redirects pour détecter un renvoi vers login/SSO
-    resp = session.get(URL, headers=HEADERS, timeout=20, allow_redirects=False)
-
-    if resp.status_code in (301, 302, 303, 307, 308):
-        location = resp.headers.get("Location", "")
-        raise RuntimeError(f"Redirection détectée (probable login/SSO) vers: {location}")
-
-    resp.raise_for_status()
-
-    # Vérifie si c'est une vraie page de login
-    if looks_like_login_page(resp.text, resp.url):
-        save_debug_html(resp.text)
-        raise RuntimeError("La page récupérée ressemble à une page de connexion (login/SSO). "
-                           "HTML sauvegardé dans debug_servier.html")
-
-    soup = BeautifulSoup(resp.text, "html.parser")
-
-    # Si aucun job tile, on sauvegarde le HTML pour comprendre (JS, blocage, changement DOM, etc.)
-    tiles = soup.select("li.job-tile")
-    if not tiles:
-        save_debug_html(resp.text)
-        raise RuntimeError("Aucun 'li.job-tile' trouvé. HTML sauvegardé dans debug_servier.html "
-                           "(probable chargement JS, blocage anti-bot, ou structure HTML modifiée).")
-
+    soup = BeautifulSoup(response.text, "html.parser")
     jobs = []
-    for job in tiles:
+
+    for job in soup.select("li.job-tile"):
         title_tag = job.select_one("a.jobTitle-link")
         date_tag = job.select_one('div[id$="-desktop-section-date-value"]')
 
@@ -104,7 +53,7 @@ def fetch_jobs() -> List[Dict[str, str]]:
             "date_dt": parse_french_date(date_str)
         })
 
-    # TRI PAR DATE DÉCROISSANTE
+    # 🔽 TRI PAR DATE DÉCROISSANTE
     jobs.sort(key=lambda x: x["date_dt"], reverse=True)
 
     return jobs
@@ -113,8 +62,8 @@ def fetch_jobs() -> List[Dict[str, str]]:
 # === EMAIL ===
 def envoyer_mail_jobs(jobs: List[Dict[str, str]]):
     sujet = f"📢 Offres Servier – Suresnes ({len(jobs)} postes)"
-    message = "Voici la liste des offres actuellement publiées (triées par date) :\n\n"
 
+    message = "Voici la liste des offres actuellement publiées (triées par date) :\n\n"
     for job in jobs:
         message += f"- {job['date']} | {job['title']}\n"
 
@@ -141,3 +90,7 @@ def main():
         print(f"✅ Email envoyé avec {len(jobs)} offre(s)")
     else:
         print("📭 Aucune offre trouvée")
+
+
+if __name__ == "__main__":
+    main()
