@@ -32,24 +32,39 @@ def parse_french_date(date_str: str) -> datetime:
     return datetime(int(year), MONTHS_FR[month_str], int(day))
 
 
-def _looks_like_login_page(response_text: str, final_url: str) -> bool:
+def looks_like_login_page(html: str, final_url: str) -> bool:
+    """
+    Détection robuste : uniquement des indices forts (pas de simple mot-clé "connexion").
+    """
     u = (final_url or "").lower()
-    t = (response_text or "").lower()
-    # Heuristiques simples (à adapter si besoin)
-    return (
-        "login" in u
-        or "sso" in u
-        or "connexion" in t
-        or "sign in" in t
-        or "username" in t
-        or "mot de passe" in t
-    )
+    if any(x in u for x in ["login", "sso", "signin", "auth"]):
+        return True
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Indice très fort : champ mot de passe
+    if soup.select_one('input[type="password"]'):
+        return True
+
+    # Indice fort : formulaire mentionnant mot de passe
+    for f in soup.select("form"):
+        txt = f.get_text(" ", strip=True).lower()
+        if "mot de passe" in txt or "password" in txt:
+            return True
+
+    return False
+
+
+def save_debug_html(html: str, filename: str = "debug_servier.html"):
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(html)
+
 
 # === SCRAPING ===
 def fetch_jobs() -> List[Dict[str, str]]:
     session = requests.Session()
 
-    # On bloque les redirects pour repérer un renvoi vers login
+    # On bloque les redirects pour détecter un renvoi vers login/SSO
     resp = session.get(URL, headers=HEADERS, timeout=20, allow_redirects=False)
 
     if resp.status_code in (301, 302, 303, 307, 308):
@@ -58,14 +73,23 @@ def fetch_jobs() -> List[Dict[str, str]]:
 
     resp.raise_for_status()
 
-    # Si malgré tout ça ressemble à une page de login
-    if _looks_like_login_page(resp.text, resp.url):
-        raise RuntimeError("La page récupérée ressemble à une page de connexion (login/SSO).")
+    # Vérifie si c'est une vraie page de login
+    if looks_like_login_page(resp.text, resp.url):
+        save_debug_html(resp.text)
+        raise RuntimeError("La page récupérée ressemble à une page de connexion (login/SSO). "
+                           "HTML sauvegardé dans debug_servier.html")
 
     soup = BeautifulSoup(resp.text, "html.parser")
-    jobs = []
 
-    for job in soup.select("li.job-tile"):
+    # Si aucun job tile, on sauvegarde le HTML pour comprendre (JS, blocage, changement DOM, etc.)
+    tiles = soup.select("li.job-tile")
+    if not tiles:
+        save_debug_html(resp.text)
+        raise RuntimeError("Aucun 'li.job-tile' trouvé. HTML sauvegardé dans debug_servier.html "
+                           "(probable chargement JS, blocage anti-bot, ou structure HTML modifiée).")
+
+    jobs = []
+    for job in tiles:
         title_tag = job.select_one("a.jobTitle-link")
         date_tag = job.select_one('div[id$="-desktop-section-date-value"]')
 
@@ -80,7 +104,9 @@ def fetch_jobs() -> List[Dict[str, str]]:
             "date_dt": parse_french_date(date_str)
         })
 
+    # TRI PAR DATE DÉCROISSANTE
     jobs.sort(key=lambda x: x["date_dt"], reverse=True)
+
     return jobs
 
 
@@ -114,7 +140,4 @@ def main():
         envoyer_mail_jobs(jobs)
         print(f"✅ Email envoyé avec {len(jobs)} offre(s)")
     else:
-        print("📭 Aucune offre trouvée (ou page chargée en JS / structure HTML différente)")
-
-if __name__ == "__main__":
-    main()
+        print("📭 Aucune offre trouvée")
